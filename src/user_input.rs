@@ -1,18 +1,3 @@
-use std::io::{self, stdout, Write};
-
-pub fn get_input(prompt: String) -> String {
-    print!("{}",prompt);
-    stdout().flush().expect("");
-    let mut input = String::new();
-
-    match io::stdin().read_line(&mut input) {
-        Ok(_goes_into_input_above) => {},
-        Err(_no_updates_is_fine) => {},
-    }
-    //println!("{}", input.to_string());
-    input.trim().to_string()
-}
-
 pub fn parse_number(number_input: String) -> Result<Vec<u32>, Box<dyn std::error::Error>>
 {
     let mut image_numbers: Vec<u32> = Vec::new();

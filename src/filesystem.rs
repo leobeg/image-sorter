@@ -1,9 +1,10 @@
-use std::{ fs, path::{Path, PathBuf}};
+use std::{ fs::{self, File}, io::BufReader, path::{Path, PathBuf}};
 
 use chrono::{DateTime, Datelike, TimeZone, Utc};
-use rexif::ExifTag;
 
 use crate::error::{ImageParseError, SortError};
+
+use exif::{In, Reader, Tag, Exif};
 
 fn read_dir(entries: &mut Vec<PathBuf>, base_path: PathBuf) 
 {
@@ -110,7 +111,7 @@ pub fn create_file_list() -> Result<Vec<(PathBuf, DateTime<Utc>)>, Box<dyn std::
         }
         
         //println!("Name: {}", path.display());
-        if extension == "jpg" 
+        if extension == "jpg" || extension == "png" 
         {
             let file_name = path.to_str().ok_or("err").expect("msg");
             let image_date = get_image_date(file_name).expect("wad");
@@ -142,7 +143,7 @@ pub fn create_file_list() -> Result<Vec<(PathBuf, DateTime<Utc>)>, Box<dyn std::
 
 pub fn move_images_to_sort() -> Result<Vec<(u32, PathBuf, DateTime<Utc>)>, SortError>
 {
-    let mut file_list = create_file_list().expect("Bad bad romance");
+    let mut file_list = create_file_list().map_err(|_| SortError::FileList)?;
 
     file_list.sort_by_key(|date| date.1);
 
@@ -172,12 +173,18 @@ pub fn move_images_to_sort() -> Result<Vec<(u32, PathBuf, DateTime<Utc>)>, SortE
 
 pub fn get_image_date(path: &str) -> Result<String, ImageParseError>
 {
-    let data = rexif::parse_file(&path).map_err(|_| ImageParseError::Exif)?;
-    let entry = data.entries.iter().find(|&x| x.tag == ExifTag::DateTimeOriginal);
-    
-    let entry = entry.ok_or(ImageParseError::NoTag)?;
+    let file = File::open(&path).map_err(|_| ImageParseError::FileOpen)?;
+    let exif: Exif = Reader::new().read_from_container(&mut BufReader::new(&file)).map_err(|_| ImageParseError::Exif)?;
 
-    Ok(entry.value.to_string())
+    let field: String = match exif.get_field(Tag::DateTimeOriginal, In::PRIMARY) 
+    {
+        Some(v) => v.display_value().to_string(),
+        None => return Err(ImageParseError::NoTag)
+    };
+
+    let field = field.replace("-", ":");
+
+    Ok(field)
 }
 
 pub fn copy_image(base_path: &PathBuf, target_path: &PathBuf, file_name: String) -> Result<PathBuf, std::io::Error>
@@ -186,7 +193,7 @@ pub fn copy_image(base_path: &PathBuf, target_path: &PathBuf, file_name: String)
     let target_path = target_path.join(file_name);
     //println!("Created dir {target_path}");
     fs::copy(base_path, &target_path)?;
-    println!("Copy");
+    //println!("Copy");
     Ok(target_path)
 }
 
@@ -197,6 +204,6 @@ pub fn rename_image(base_path: &PathBuf, target_path: &PathBuf, file_name: Strin
     //let target_path = target_path.clone();
     let target_path = target_path.join(file_name);
     fs::rename(base_path, &target_path)?;
-    println!("Renamed");
+    //println!("Renamed");
     Ok(target_path)
 }
