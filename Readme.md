@@ -9,7 +9,7 @@ I know that many things are better implemented in existing crates but I want to 
 - Statistics and log file
 
 
-## Config file format
+## Config file format (maybe)
 - The file uses keys to identify the values
 - A value is read in one line because the file is parsed line per line
 - Lines with a ``;`` are ignored
