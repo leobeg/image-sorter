@@ -3,19 +3,19 @@
 mod error;
 mod user_input;
 mod filesystem;
-
-use std::{fs::{self}, path::Path};
+mod config;
 
 use chrono::Datelike;
 use clap::Parser;
-use dialoguer::{console::Style, theme::ColorfulTheme, Confirm, Input};
-use filesystem::{create_file_list, map_target, move_images_to_sort};
+use config::{init_config, Config};
+use dialoguer::Input;
+use filesystem::{map_target, move_images_to_sort};
 
 
 
 use crate::{filesystem::rename_image, user_input::parse_number};
 
-macro_rules! skip_fail {
+#[macro_export] macro_rules! skip_fail {
     ($res:expr, $error_msg:expr) => {
         match $res {
             Ok(val) => val,
@@ -27,7 +27,7 @@ macro_rules! skip_fail {
     };
 }
 
-macro_rules! skip_none {
+#[macro_export] macro_rules! skip_none {
     ($res:expr, $error_msg:expr) => {
         match $res {
             Some(val) => val,
@@ -48,42 +48,44 @@ struct Cli {
     path: std::path::PathBuf,
 }
 
+
 fn main() -> std::io::Result<()> {
     //let args = Cli::parse();
 
-    let theme = ColorfulTheme {
-        values_style: Style::new().yellow().dim(),
-        ..ColorfulTheme::default()
-    };
+    let config: Config = init_config().expect("Problem with config").ok_or("Config aborted").unwrap();
+
+    // let theme = ColorfulTheme {
+    //     values_style: Style::new().yellow().dim(),
+    //     ..ColorfulTheme::default()
+    // };
     
-    sort_dialog();
+    sort_dialog(&config);
 
-    let files = create_file_list().unwrap();
+    // let files = create_file_list(&config.input_folder).unwrap();
 
-    if Confirm::with_theme(&theme).with_prompt("Remove sorted files?").interact().unwrap()
-    {
-        for file in files
-        {
-            skip_fail!(fs::remove_file(&file.0), format!("Couldn't remove file at {:?}", &file.0));
-        }
-    }
+    // if Confirm::with_theme(&theme).with_prompt("Remove sorted files?").interact().unwrap()
+    // {
+    //     // for file in files
+    //     // {
+    //     //     //skip_fail!(fs::remove_file(&file.0), format!("Couldn't remove file at {:?}", &file.0));
+    //     // }
+    // }
 
-    //let input = get_input("Input image number: ");
-
-
-    // ToDo: Implement sort with year month day before assening numbers
+    // ToDo: Add config dialoge to add a config. Config should be written to current folder
+    // ToDo: Add nicer println statements with console package
+    // ToDo: Add more detailed output
     // Concept: After numbers are asigned in sort folder the user can input number ranges to name them. After that the files will get sorted into the corresponding folders
 
 
     Ok(())
 }
 
-fn sort_dialog()
+fn sort_dialog(config: &Config)
 {
-    let path = Path::new("source/");
-    let mut indexes = map_target(path);
+    //let path = Path::new("source/");
+    let mut indexes = map_target(&config.image_folder);
 
-    let file_index = move_images_to_sort().expect("Something went wrong");
+    let file_index = move_images_to_sort(&config.input_folder).expect("Something went wrong");
 
     let _ = opener::open("./sort");
     println!("File list: {:?}", file_index);
@@ -110,7 +112,8 @@ fn sort_dialog()
             let extension =  file.1.extension().unwrap();
 
             let extension = String::from(extension.to_str().unwrap());
-            let target_path = Path::new(format!("source/{year}/{month}").as_str()).to_path_buf();
+            let target_path = config.image_folder.join(year.to_string()).join(month.to_string());
+            //let target_path = Path::new(format!("source/{year}/{month}").as_str()).to_path_buf();
             let folder = indexes.iter_mut().find(|x| x.0.as_os_str() == target_path.as_os_str());
             
             let mut index: u32 = 1;
@@ -124,7 +127,7 @@ fn sort_dialog()
 
             let file_name = format!("{:03}-{year}{:02}-{name_input}.{extension}", index, month);
             skip_fail!(rename_image(&file.1, &target_path, file_name), format!("Couldn't rename image {number}. Skipping..."));
-            skip_fail!(fs::remove_file(&file.1), format!("Couldn't remove image {number} from sort folder"));
+            //skip_fail!(fs::remove_file(&file.1), format!("Couldn't remove image {number} from sort folder"));
 
             if index == 1
             {

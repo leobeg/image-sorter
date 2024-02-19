@@ -6,6 +6,36 @@ use crate::error::{ImageParseError, SortError};
 
 use exif::{In, Reader, Tag, Exif};
 
+fn read_dir_files(entries: &mut Vec<PathBuf>, base_path: PathBuf)
+{
+    for entry in fs::read_dir(&base_path).unwrap()
+    {
+        let entry = entry.unwrap();
+        let path = entry.path();
+        let metadata = entry.metadata().unwrap();
+        
+        if metadata.is_dir()
+        {
+            read_dir_files(entries, path);
+        } else if metadata.is_file() {
+            entries.push(path);
+        }
+        
+    }
+}
+
+fn walk_dir(base_path: &Path) -> Vec<PathBuf>
+{
+    let mut entries: Vec<PathBuf> = Vec::new();
+
+    let base_path = base_path.to_owned();
+    read_dir_files(&mut entries, base_path);
+
+    //println!("Entries {:?}", entries);
+
+    entries
+}
+
 fn read_dir(entries: &mut Vec<PathBuf>, base_path: PathBuf) 
 {
     let mut is_top = true;
@@ -89,16 +119,16 @@ pub fn get_last_index(path: &PathBuf) -> u32
 
 
 
-pub fn create_file_list() -> Result<Vec<(PathBuf, DateTime<Utc>)>, Box<dyn std::error::Error>>
+pub fn create_file_list(path: &PathBuf) -> Result<Vec<(PathBuf, DateTime<Utc>)>, Box<dyn std::error::Error>>
 {
-    let paths = fs::read_dir("./")?;
+    let paths = walk_dir(&path);
 
     let mut file_list: Vec<(PathBuf, DateTime<Utc>)> = Vec::new();
 
-    for entry in paths 
+    for path in paths 
     {
-        let entry = entry?;
-        let path = entry.path();
+        //let entry = entry?;
+        //let path = entry.path();
         let extension = match path.extension()
         {
             Some(v) => v,
@@ -141,17 +171,16 @@ pub fn create_file_list() -> Result<Vec<(PathBuf, DateTime<Utc>)>, Box<dyn std::
     Ok(file_list)
 }
 
-pub fn move_images_to_sort() -> Result<Vec<(u32, PathBuf, DateTime<Utc>)>, SortError>
+pub fn move_images_to_sort(source_path: &PathBuf) -> Result<Vec<(u32, PathBuf, DateTime<Utc>)>, SortError>
 {
-    let mut file_list = create_file_list().map_err(|_| SortError::FileList)?;
+    let mut file_list = create_file_list(source_path).map_err(|_| SortError::FileList)?;
 
     file_list.sort_by_key(|date| date.1);
 
     let mut file_index: Vec<(u32, PathBuf, DateTime<Utc>)> = Vec::new();
     let mut i: u32 = 1;
     for (path, date) in  file_list {
-        
-
+    
         let year = date.year();
         let month = date.month();
         let extension = match path.extension()
