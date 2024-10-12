@@ -89,11 +89,11 @@ pub fn get_last_index(path: &PathBuf) -> u32
         let metadata = entry.metadata().unwrap();
         if metadata.is_file() {
             let name = path.file_stem().unwrap().to_str().unwrap();
-            if !name.contains("-")
+            if !name.contains("_")
             {
                 continue;
             }
-            let name: Vec<_> = name.split("-").collect();
+            let name: Vec<_> = name.split("_").collect();
             let number: u32 = match name[0].parse() {
                 Ok(v) => v,
                 Err(_) => continue
@@ -144,20 +144,27 @@ pub fn create_file_list(path: &PathBuf) -> Result<Vec<(PathBuf, DateTime<Utc>)>,
         if extension == "jpg" || extension == "png" 
         {
             let file_name = path.to_str().ok_or("err").expect("msg");
-            let image_date = get_image_date(file_name).expect("wad");
-            // let imageDate = match imageDate {
-            //     Ok(date) => date,
-            //     Err(e) => {
-            //         println!("Sadly your image is trash")
-            //         cont;
-            //     }
-            // };
+            let image_date = get_image_date(file_name);
+            let dt = match image_date {
+                Ok(date) => {
+                    let image_date = date.replace(" ", ":");
+                    let image_dates = image_date.split(":").collect::<Vec<_>>();
+            
+                    let dt = Utc.with_ymd_and_hms(image_dates[0].parse::<i32>().unwrap(), image_dates[1].parse::<u32>().unwrap(), image_dates[2].parse::<u32>().unwrap(), image_dates[3].parse::<u32>().unwrap(), image_dates[4].parse::<u32>().unwrap(), image_dates[5].parse::<u32>().unwrap()).unwrap();
+                    dt
+                },
+                Err(_e) => {
+                    let metadata = (fs::metadata(file_name).expect("Couldn't parse image metadata")).created().expect("Couldn't parse image metadata");
+                    let dt: DateTime<Utc> = metadata.clone().into();
+                    dt
+                }
+            };
 
             // println!("Date: {}", image_date);
-            let image_date = image_date.replace(" ", ":");
-            let image_dates = image_date.split(":").collect::<Vec<_>>();
+            //let image_date = image_date.replace(" ", ":");
+            //let image_dates = image_date.split(":").collect::<Vec<_>>();
             
-            let dt = Utc.with_ymd_and_hms(image_dates[0].parse::<i32>().unwrap(), image_dates[1].parse::<u32>().unwrap(), image_dates[2].parse::<u32>().unwrap(), image_dates[3].parse::<u32>().unwrap(), image_dates[4].parse::<u32>().unwrap(), image_dates[5].parse::<u32>().unwrap()).unwrap();
+            //let dt = Utc.with_ymd_and_hms(image_dates[0].parse::<i32>().unwrap(), image_dates[1].parse::<u32>().unwrap(), image_dates[2].parse::<u32>().unwrap(), image_dates[3].parse::<u32>().unwrap(), image_dates[4].parse::<u32>().unwrap(), image_dates[5].parse::<u32>().unwrap()).unwrap();
 
             // println!("Year: {}", image_dates[0]);
             // println!("Month: {}", image_dates[1]);

@@ -1,28 +1,40 @@
 use std::{error::Error, fs, path::PathBuf};
 
+// use config::{Config, ConfigError};
 use dialoguer::{console::Style, theme::ColorfulTheme, Confirm, Input};
 
-#[derive(Debug)]
-pub struct Config {
+#[derive(Debug, Clone)]
+pub struct Settings {
 
-    pub rename: bool,
+    //pub rename: bool,
     pub image_folder: PathBuf,
     pub input_folder: PathBuf,
-    pub use_sort_folder: bool,
+    //pub use_sort_folder: bool,
     
 }
 
-// fn save_config_to_fs(path: &PathBuf) -> Result<Option<Config>, ConfigError>
+// const CONFIG_FILE_PATH: &str = "./config/Default.toml";
+// const CONFIG_FILE_PREFIX: &str = "./config/";
+
+// fn save_config_to_fs(path: &PathBuf) -> Result<Option<Settings>, ConfigError>
 // {
-//     let file = File::open("foo.txt")?;
-//     let mut buf_reader = BufReader::new(file);
-//     let mut contents = String::new();
-//     buf_reader.read_to_string(&mut contents)?;
-//     assert_eq!(contents, "Hello, world!");
-//     Ok()
+//     let settings = Config::builder()
+//     // Add in `./Settings.toml`
+//     .add_source(config::File::with_name("./Settings"))
+//     // Add in settings from the environment (with a prefix of APP)
+//     // Eg.. `APP_DEBUG=1 ./target/app` would set the `debug` key
+//     .add_source(config::Environment::with_prefix("APP"))
+//     .build()
+//     .unwrap();
+
+//     Ok(Some((
+//         Settings {
+
+//         }
+//     )))
 // }
 
-pub fn init_config() -> Result<Option<Config>, Box<dyn Error>> {
+pub fn dialog_config() -> Result<Option<Settings>, Box<dyn Error>> {
     let theme = ColorfulTheme {
         values_style: Style::new().yellow().dim(),
         ..ColorfulTheme::default()
@@ -35,14 +47,6 @@ pub fn init_config() -> Result<Option<Config>, Box<dyn Error>> {
     {
         return Ok(None);
     }
-
-    let rename = Confirm::with_theme(&theme)
-        .with_prompt("Keep files in sort folder?")
-        .interact()?;
-
-    let use_sort_folder = Confirm::with_theme(&theme)
-        .with_prompt("Use seperate sort folder?")
-        .interact()?;
 
     let image_folder: String = Input::with_theme(&theme)
         .with_prompt("Path to image folder")
@@ -76,10 +80,10 @@ pub fn init_config() -> Result<Option<Config>, Box<dyn Error>> {
         return Ok(None);
     }
     
-    Ok(Some(Config {
-        rename,
+    Ok(Some(Settings {
+        //rename,
         image_folder,
-        input_folder,
-        use_sort_folder,
+        input_folder
+        //use_sort_folder,
     }))
 }
