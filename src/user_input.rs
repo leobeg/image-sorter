@@ -1,3 +1,7 @@
+use std::default;
+
+use dialoguer::Input;
+
 pub fn parse_number(number_input: String) -> Result<Vec<u32>, Box<dyn std::error::Error>>
 {
     let mut image_numbers: Vec<u32> = Vec::new();
@@ -25,4 +29,34 @@ pub fn parse_number(number_input: String) -> Result<Vec<u32>, Box<dyn std::error
 
     Ok(image_numbers)
 
+}
+
+pub fn get_numbers(prompt: &str) -> Result<Vec<u32>, Box<dyn std::error::Error>>
+{
+    let number_input = Input::new()
+            .with_prompt(prompt)
+            .interact_text()
+            .unwrap();
+    
+    let image_numbers = parse_number(number_input);
+
+    return image_numbers;
+}
+
+pub fn get_string(prompt: String, allow_empty: bool) -> String
+{
+    Input::new()
+        .with_prompt(prompt)
+        .allow_empty(allow_empty)
+        .interact_text()
+        .unwrap()
+}
+
+pub fn get_string_with_default(prompt: String, prompt_default: String) -> String
+{
+    Input::new()
+        .with_prompt(prompt)
+        .default(prompt_default)
+        .interact_text()
+        .unwrap()
 }

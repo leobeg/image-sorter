@@ -4,16 +4,17 @@ mod config;
 mod error;
 mod filesystem;
 mod user_input;
+//mod file_index;
 
 use std::{fs};
 
 use chrono::Datelike;
 use clap::Parser;
 use config::{dialog_config, Settings};
-use dialoguer::Input;
 use filesystem::{map_target, move_images_to_sort};
+use user_input::{get_numbers, get_string, get_string_with_default};
 
-use crate::{filesystem::rename_image, user_input::parse_number};
+use crate::filesystem::rename_image;
 
 #[macro_export]
 macro_rules! skip_fail {
@@ -85,72 +86,61 @@ fn main() -> std::io::Result<()> {
 
 fn sort_dialog(config: &Settings) {
     //let path = Path::new("source/");
-    let mut indexes = map_target(&config.image_folder);
+    let mut output_index = map_target(&config.image_folder);
 
-    let file_index = move_images_to_sort(&config.input_folder).expect("Something went wrong");
+    let input_index = move_images_to_sort(&config.input_folder).expect("Something went wrong");
 
     fs::create_dir_all("./sort").expect("");
     let _ = opener::open("./sort");
-    println!("Found {:?} files!", file_index.len());
+    println!("Found {:?} files!", input_index.len());
 
     let sort: bool = false;
 
     while !sort {
         println!("");
-        let number_input = Input::new()
-            .with_prompt("Input image number")
-            .interact_text()
-            .unwrap();
-        if number_input == "finish" {
-            break;
-        }
-        let image_numbers: Vec<u32> = skip_fail!(parse_number(number_input), "Invalid Number");
+        
+        let image_numbers = skip_fail!(get_numbers("Input image number"), "Invalid Number");
 
-        let folder_input: String = Input::new()
-            .with_prompt(format!(
-                "Enter a folder for selected indexes {:?}",
-                image_numbers
-            ))
-            .default("Sonstiges".to_string())
-            .interact_text()
-            .unwrap();
-
-        let name_input: String = Input::new().with_prompt(format!("Enter a name for selected indexes {:?}", image_numbers)).allow_empty(true).interact_text().unwrap();
+        let folder_input = get_string_with_default(format!("Enter a folder for selected indexes {:?}",image_numbers), "Sonstiges".to_string());
+        
+        let name_input = get_string(format!("Enter a name for selected indexes {:?}", image_numbers), false);
 
         for number in image_numbers {
+
+            // Get file from file index
+
             let file = skip_none!(
-                file_index.iter().find(|&x| x.0 == number),
+                input_index.iter().find(|&x| x.0 == number),
                 format!("Image {number} not found. Skipping...")
             );
 
+            // Get file properties for sorting
             let year = file.2.year();
             let month = file.2.month();
             let day = file.2.day();
-            let extension = file.1.extension().unwrap();
-
+            let extension = skip_none!(file.1.extension(), format!("Image {number} extension is broken. Skipping..."));
             let extension = String::from(extension.to_str().unwrap());
-            //let target_path = config.image_folder.join(year.to_string()).join(format!("{:0>2}", month));
+
+
+            // Construct target path
             let target_path = config
                 .image_folder
                 .join(year.to_string())
                 .join(folder_input.to_string());
 
-            // if folder_input.is_empty()
-            // {
-            //     target_path = config.image_folder.join(year.to_string()).join("Sonstiges");
-            // }
 
-            //let target_path = Path::new(format!("source/{year}/{month}").as_str()).to_path_buf();
-            let folder = indexes
+            let folder = output_index
                 .iter_mut()
                 .find(|x| x.0.as_os_str() == target_path.as_os_str());
 
+
+            // Increment index and set the current index
             let mut index: u32 = 1;
 
-            if folder.is_some() {
-                let folder = folder.unwrap();
-                index = folder.1 + 1;
-                folder.1 = index;
+            if let Some(folder) = folder {
+                
+                folder.1 = folder.1 + 1;
+                index = folder.1;
             }
 
             let mut file_name = format!("{:03}_{year}-{:02}-{:02}.{extension}",index, month, day);
@@ -167,7 +157,7 @@ fn sort_dialog(config: &Settings) {
             //skip_fail!(fs::remove_file(&file.1), format!("Couldn't remove image {number} from sort folder"));
 
             if index == 1 {
-                indexes.push((target_path, 1));
+                output_index.push((target_path, 1));
             }
         }
     }
