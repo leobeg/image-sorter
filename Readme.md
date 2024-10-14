@@ -7,7 +7,10 @@ I know that many things are better implemented in existing crates but I want to 
 - Ability to create a config which stores the paths
 - Map the directory with sub-folders (maybe create cache) for pictures
 - Statistics and log file
-- Whatsapp File format Date detection
+- Whatsapp File format Date detection#
+- Resort files in folder so index matches date order
+- Write non-exif detected image date to the exif of the image
+
 
 
 ## Config file format (maybe)
