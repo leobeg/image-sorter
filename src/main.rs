@@ -4,6 +4,7 @@ mod config;
 mod error;
 mod filesystem;
 mod user_input;
+mod image_date_helper;
 //mod file_index;
 
 use std::{fs};
@@ -103,7 +104,7 @@ fn sort_dialog(config: &Settings) {
 
         let folder_input = get_string_with_default(format!("Enter a folder for selected indexes {:?}",image_numbers), "Sonstiges".to_string());
         
-        let name_input = get_string(format!("Enter a name for selected indexes {:?}", image_numbers), false);
+        let name_input = get_string(format!("Enter a name for selected indexes {:?}", image_numbers), true);
 
         for number in image_numbers {
 

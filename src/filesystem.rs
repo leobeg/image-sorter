@@ -2,7 +2,7 @@ use std::{ fs::{self, File}, io::BufReader, path::{Path, PathBuf}};
 
 use chrono::{DateTime, Datelike, TimeZone, Utc};
 
-use crate::error::{ImageParseError, SortError};
+use crate::{error::{ImageParseError, SortError}, image_date_helper};
 
 use exif::{In, Reader, Tag, Exif};
 
@@ -124,6 +124,7 @@ pub fn create_file_list(path: &PathBuf) -> Result<Vec<(PathBuf, DateTime<Utc>)>,
     let paths = walk_dir(&path);
 
     let mut file_list: Vec<(PathBuf, DateTime<Utc>)> = Vec::new();
+    let mut skip_counter: u32 = 0;
 
     for path in paths 
     {
@@ -135,45 +136,36 @@ pub fn create_file_list(path: &PathBuf) -> Result<Vec<(PathBuf, DateTime<Utc>)>,
             None => continue,
         };
 
-        if !path.is_file()
+        // If path not a file or not jpg or png skip
+        if !path.is_file() || !(extension == "jpg" || extension == "png")
         {
             continue;
         }
-        
-        //println!("Name: {}", path.display());
-        if extension == "jpg" || extension == "png" 
+
+        let image_date = match image_date_helper::get_image_date(&path)
         {
-            let file_name = path.to_str().ok_or("err").expect("msg");
-            let image_date = get_image_date(file_name);
-            let dt = match image_date {
-                Ok(date) => {
-                    let image_date = date.replace(" ", ":");
-                    let image_dates = image_date.split(":").collect::<Vec<_>>();
-            
-                    let dt = Utc.with_ymd_and_hms(image_dates[0].parse::<i32>().unwrap(), image_dates[1].parse::<u32>().unwrap(), image_dates[2].parse::<u32>().unwrap(), image_dates[3].parse::<u32>().unwrap(), image_dates[4].parse::<u32>().unwrap(), image_dates[5].parse::<u32>().unwrap()).unwrap();
-                    dt
-                },
-                Err(_e) => {
-                    let metadata = (fs::metadata(file_name).expect("Couldn't parse image metadata")).created().expect("Couldn't parse image metadata");
-                    let dt: DateTime<Utc> = metadata.clone().into();
-                    dt
-                }
-            };
+            Ok(v) => v,
+            Err(e) => 
+            { 
+                println!("Couldn't get date for image \"{}\"  Error: {}", path.display(), e);
+                skip_counter += 1;
+                continue; 
+            }
+        };
 
-            // println!("Date: {}", image_date);
-            //let image_date = image_date.replace(" ", ":");
-            //let image_dates = image_date.split(":").collect::<Vec<_>>();
-            
-            //let dt = Utc.with_ymd_and_hms(image_dates[0].parse::<i32>().unwrap(), image_dates[1].parse::<u32>().unwrap(), image_dates[2].parse::<u32>().unwrap(), image_dates[3].parse::<u32>().unwrap(), image_dates[4].parse::<u32>().unwrap(), image_dates[5].parse::<u32>().unwrap()).unwrap();
+            //println!("Year: {}",  image_date.year());
+            //println!("Month: {}", image_date.month());
+            //println!("Day: {}",   image_date.day());
 
-            // println!("Year: {}", image_dates[0]);
-            // println!("Month: {}", image_dates[1]);
-            // println!("Day: {}", image_dates[2]);
-
-            file_list.push((path, dt));
-        }
+        file_list.push((path, image_date));
         
     }
+
+    if skip_counter > 0
+    {
+        println!("Skipped {} file(s) because of errors!", skip_counter);
+    }
+    
 
     Ok(file_list)
 }
@@ -190,6 +182,7 @@ pub fn move_images_to_sort(source_path: &PathBuf) -> Result<Vec<(u32, PathBuf, D
     
         let year = date.year();
         let month = date.month();
+        let day = date.day();
         let extension = match path.extension()
         {
             Some(v) => v,
@@ -199,7 +192,7 @@ pub fn move_images_to_sort(source_path: &PathBuf) -> Result<Vec<(u32, PathBuf, D
         let extension = String::from(extension.to_str().ok_or(SortError::Extension)?);
         
         let target_path = Path::new(format!("sort").as_str()).to_path_buf();
-        let copy = copy_image(&path, &target_path, format!("{i}-{year}-{month}.{extension}")).map_err(|_| SortError::Copy)?;
+        let copy = copy_image(&path, &target_path, format!("{i}_{year}-{month}-{day}.{extension}")).map_err(|_| SortError::Copy)?;
         file_index.push((i, copy, date));
         i += 1;
     }
@@ -207,21 +200,7 @@ pub fn move_images_to_sort(source_path: &PathBuf) -> Result<Vec<(u32, PathBuf, D
     Ok(file_index)
 }
 
-pub fn get_image_date(path: &str) -> Result<String, ImageParseError>
-{
-    let file = File::open(&path).map_err(|_| ImageParseError::FileOpen)?;
-    let exif: Exif = Reader::new().read_from_container(&mut BufReader::new(&file)).map_err(|_| ImageParseError::Exif)?;
 
-    let field: String = match exif.get_field(Tag::DateTimeOriginal, In::PRIMARY) 
-    {
-        Some(v) => v.display_value().to_string(),
-        None => return Err(ImageParseError::NoTag)
-    };
-
-    let field = field.replace("-", ":");
-
-    Ok(field)
-}
 
 pub fn copy_image(base_path: &PathBuf, target_path: &PathBuf, file_name: String) -> Result<PathBuf, std::io::Error>
 {

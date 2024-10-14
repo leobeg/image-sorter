@@ -7,7 +7,7 @@ pub enum ImageParseError {
     FileOpen,
     Exif,
     NoTag,
-    
+    InvalidName
 }
 
 impl std::error::Error for ImageParseError {}
@@ -15,9 +15,10 @@ impl std::error::Error for ImageParseError {}
 impl fmt::Display for ImageParseError {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         match self {
-            ImageParseError::FileOpen => write!(f, "FileOpen Error"),
-            ImageParseError::Exif => write!(f, "Exif Error"),
-            ImageParseError::NoTag => write!(f, "NoTag Error"),
+            ImageParseError::FileOpen => write!(f, "FileOpen"),
+            ImageParseError::Exif => write!(f, "Exif"),
+            ImageParseError::NoTag => write!(f, "NoTag"),
+            ImageParseError::InvalidName => write!(f, "InvalidName"),
         }
     }
 }
