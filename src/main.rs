@@ -5,14 +5,16 @@ mod error;
 mod filesystem;
 mod user_input;
 mod image_date_helper;
+mod image_folder_helper;
 //mod file_index;
 
-use std::{fs};
+use std::fs;
 
 use chrono::Datelike;
 use clap::Parser;
 use config::{dialog_config, Settings};
 use filesystem::{map_target, move_images_to_sort};
+use image_folder_helper::resort_folder_index;
 use user_input::{get_numbers, get_string, get_string_with_default};
 
 use crate::filesystem::rename_image;
@@ -151,15 +153,24 @@ fn sort_dialog(config: &Settings) {
                 file_name = format!("{:03}_{year}-{:02}-{:02}-{name_input}.{extension}",index, month, day);
             }
 
+            
+
             skip_fail!(
                 rename_image(&file.1, &target_path, file_name),
                 format!("Couldn't rename image {number}. Skipping...")
             );
             //skip_fail!(fs::remove_file(&file.1), format!("Couldn't remove image {number} from sort folder"));
 
+            let _ = match resort_folder_index(&target_path) {
+                Ok(v) => {},
+                Err(err) => println!("Err: {:?} ", err)
+            };
+
             if index == 1 {
                 output_index.push((target_path, 1));
             }
+
         }
+        
     }
 }

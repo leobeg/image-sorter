@@ -75,6 +75,25 @@ fn get_date_whatsapp(file_name: String) -> Result<DateTime<Utc>, ImageParseError
     Ok(date_time)
 }
 
+fn get_date_imagesorter(file_name: String) -> Result<DateTime<Utc>, ImageParseError>
+{
+    let date_str = match file_name.split("_").nth(1)
+    {
+        Some(v) => v,
+        None => return Err(ImageParseError::InvalidName),
+    };
+
+    let naive_date = NaiveDate::parse_from_str(date_str, "%Y-%m-%d").map_err(|_| ImageParseError::InvalidName)?;
+    let naive_datetime = match naive_date.and_hms_opt(12, 0, 0)
+    {
+        Some(v) => v,
+        None => return Err(ImageParseError::InvalidName),
+    };
+    let date_time = DateTime::<Utc>::from_naive_utc_and_offset(naive_datetime, Utc);
+
+    Ok(date_time)
+}
+
 pub fn get_image_date(path: &PathBuf) -> Result<DateTime<Utc>, ImageParseError>
 {
 
@@ -85,9 +104,13 @@ pub fn get_image_date(path: &PathBuf) -> Result<DateTime<Utc>, ImageParseError>
     if file_name.starts_with("IMG") && file_name.contains("WA")
     {
         date = get_date_whatsapp(file_name)?;
-    } else {
-        date = get_date_exif(path)?;
-    }
+        return Ok(date);
+    } 
     
+    date = match get_date_exif(path) {
+        Ok(v) => v,
+        Err(_) => get_date_imagesorter(file_name)?
+    };
+
     Ok(date)
 }

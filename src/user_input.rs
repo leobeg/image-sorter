@@ -1,4 +1,3 @@
-use std::default;
 
 use dialoguer::Input;
 

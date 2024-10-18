@@ -1,10 +1,8 @@
-use std::{ fs::{self, File}, io::BufReader, path::{Path, PathBuf}};
+use std::{ fs::{self}, path::{Path, PathBuf}};
 
-use chrono::{DateTime, Datelike, TimeZone, Utc};
+use chrono::{DateTime, Datelike, Utc};
 
-use crate::{error::{ImageParseError, SortError}, image_date_helper};
-
-use exif::{In, Reader, Tag, Exif};
+use crate::{error::SortError, image_date_helper};
 
 fn read_dir_files(entries: &mut Vec<PathBuf>, base_path: PathBuf)
 {
