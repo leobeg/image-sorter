@@ -5,12 +5,10 @@ use dialoguer::{console::Style, theme::ColorfulTheme, Confirm, Input};
 
 #[derive(Debug, Clone)]
 pub struct Settings {
-
     //pub rename: bool,
     pub image_folder: PathBuf,
     pub input_folder: PathBuf,
     //pub use_sort_folder: bool,
-    
 }
 
 // const CONFIG_FILE_PATH: &str = "./config/Default.toml";
@@ -57,10 +55,8 @@ pub fn dialog_config() -> Result<Option<Settings>, Box<dyn Error>> {
         .interact()?;
 
     let image_folder: PathBuf = image_folder.into();
-    
 
-    if !image_folder.exists()
-    {
+    if !image_folder.exists() {
         println!("The image folder does not exist. Creating?");
 
         match fs::create_dir(&image_folder) {
@@ -69,21 +65,19 @@ pub fn dialog_config() -> Result<Option<Settings>, Box<dyn Error>> {
                 println!("Could not create folder: {:?}", err);
                 return Ok(None);
             }
-        } 
+        }
     }
 
     let input_folder: PathBuf = input_folder.into();
 
-    if !input_folder.exists()
-    {
+    if !input_folder.exists() {
         println!("Input folder does not exist. Exiting...");
         return Ok(None);
     }
-    
+
     Ok(Some(Settings {
         //rename,
         image_folder,
-        input_folder
-        //use_sort_folder,
+        input_folder, //use_sort_folder,
     }))
 }

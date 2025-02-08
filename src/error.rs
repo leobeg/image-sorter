@@ -7,7 +7,7 @@ pub enum ImageParseError {
     FileOpen,
     Exif,
     NoTag,
-    InvalidName
+    InvalidName,
 }
 
 impl std::error::Error for ImageParseError {}
@@ -41,5 +41,3 @@ impl fmt::Display for SortError {
         }
     }
 }
-
-

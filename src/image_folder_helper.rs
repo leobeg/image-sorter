@@ -2,19 +2,19 @@ use std::{fs, path::PathBuf};
 
 use chrono::{DateTime, Utc};
 
-use crate::{error::ImageParseError, filesystem::rename_image, image_date_helper::get_image_date, skip_fail, skip_none};
+use crate::{
+    error::ImageParseError, filesystem_old::rename_image, image_date_helper::get_image_date,
+    skip_fail, skip_none,
+};
 
 #[derive(Debug, Clone, PartialEq)]
 struct SortedImage {
     index: u32,
     date: DateTime<Utc>,
-    path: PathBuf
-    
+    path: PathBuf,
 }
 
-
-pub fn resort_folder_index(path: &PathBuf) -> Result<(), ImageParseError>
-{
+pub fn resort_folder_index(path: &PathBuf) -> Result<(), ImageParseError> {
     check_folder(path);
 
     // if entries.len() == 0
@@ -26,31 +26,31 @@ pub fn resort_folder_index(path: &PathBuf) -> Result<(), ImageParseError>
     Ok(())
 }
 
-fn check_folder(path: &PathBuf) -> Result<(), ImageParseError>
-{
+fn check_folder(path: &PathBuf) -> Result<(), ImageParseError> {
     let mut entries: Vec<SortedImage> = Vec::new();
 
-    for entry in fs::read_dir(path).unwrap()
-    {
+    for entry in fs::read_dir(path).unwrap() {
         let entry = entry.unwrap();
         let path = entry.path();
         let metadata = entry.metadata().unwrap();
         if metadata.is_file() {
             let name = path.file_stem().unwrap().to_str().unwrap();
-            if !name.contains("_")
-            {
+            if !name.contains("_") {
                 continue;
             }
             let name: Vec<_> = name.split("_").collect();
             let number: u32 = match name[0].parse() {
                 Ok(v) => v,
-                Err(_) => continue
-            }; 
+                Err(_) => continue,
+            };
 
             let date = get_image_date(&path)?;
-            entries.push(SortedImage { index: number, date: date, path: path });
+            entries.push(SortedImage {
+                index: number,
+                date: date,
+                path: path,
+            });
         }
-            
     }
 
     let old_entries = entries.clone();
@@ -59,14 +59,12 @@ fn check_folder(path: &PathBuf) -> Result<(), ImageParseError>
 
     entries.sort_by_key(|item| item.date);
 
-    if entries == old_entries
-    {
+    if entries == old_entries {
         println!("No changes to reorder");
         return Ok(());
     }
 
-    for (new_index, item) in entries.iter_mut().enumerate()
-    {
+    for (new_index, item) in entries.iter_mut().enumerate() {
         let name = item.path.file_name().unwrap().to_str().unwrap();
 
         // Reconstruct the image path with the new index
@@ -104,10 +102,6 @@ fn check_folder(path: &PathBuf) -> Result<(), ImageParseError>
 
         println!("{:?}", new_path.join(file_debug));
     }
-    
-    
-    
-
 
     //println!("Indexes: {:?}", entries);
 

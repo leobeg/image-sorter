@@ -3,21 +3,24 @@
 mod config;
 mod error;
 mod filesystem;
-mod user_input;
+pub mod filesystem_old;
+mod image;
 mod image_date_helper;
 mod image_folder_helper;
+mod user_input;
 //mod file_index;
 
-use std::fs;
+use std::{fs, path::{Path, PathBuf}};
 
 use chrono::Datelike;
 use clap::Parser;
 use config::{dialog_config, Settings};
-use filesystem::{map_target, move_images_to_sort};
+use filesystem::FileSystem;
+use filesystem_old::{map_target, move_images_to_sort};
 use image_folder_helper::resort_folder_index;
 use user_input::{get_numbers, get_string, get_string_with_default};
 
-use crate::filesystem::rename_image;
+use crate::filesystem_old::rename_image;
 
 #[macro_export]
 macro_rules! skip_fail {
@@ -67,6 +70,9 @@ fn main() -> std::io::Result<()> {
     //     ..ColorfulTheme::default()
     // };
 
+    let filesystem = FileSystem::new(config.input_folder.clone(), config.image_folder.clone(), Path::new("./sort").to_path_buf());
+    filesystem.read_input_dir();
+
     sort_dialog(&config);
 
     // let files = create_file_list(&config.input_folder).unwrap();
@@ -101,15 +107,20 @@ fn sort_dialog(config: &Settings) {
 
     while !sort {
         println!("");
-        
+
         let image_numbers = skip_fail!(get_numbers("Input image number"), "Invalid Number");
 
-        let folder_input = get_string_with_default(format!("Enter a folder for selected indexes {:?}",image_numbers), "Sonstiges".to_string());
-        
-        let name_input = get_string(format!("Enter a name for selected indexes {:?}", image_numbers), true);
+        let folder_input = get_string_with_default(
+            format!("Enter a folder for selected indexes {:?}", image_numbers),
+            "Sonstiges".to_string(),
+        );
+
+        let name_input = get_string(
+            format!("Enter a name for selected indexes {:?}", image_numbers),
+            true,
+        );
 
         for number in image_numbers {
-
             // Get file from file index
 
             let file = skip_none!(
@@ -121,9 +132,11 @@ fn sort_dialog(config: &Settings) {
             let year = file.2.year();
             let month = file.2.month();
             let day = file.2.day();
-            let extension = skip_none!(file.1.extension(), format!("Image {number} extension is broken. Skipping..."));
+            let extension = skip_none!(
+                file.1.extension(),
+                format!("Image {number} extension is broken. Skipping...")
+            );
             let extension = String::from(extension.to_str().unwrap());
-
 
             // Construct target path
             let target_path = config
@@ -131,29 +144,26 @@ fn sort_dialog(config: &Settings) {
                 .join(year.to_string())
                 .join(folder_input.to_string());
 
-
             let folder = output_index
                 .iter_mut()
                 .find(|x| x.0.as_os_str() == target_path.as_os_str());
-
 
             // Increment index and set the current index
             let mut index: u32 = 1;
 
             if let Some(folder) = folder {
-                
                 folder.1 = folder.1 + 1;
                 index = folder.1;
             }
 
-            let mut file_name = format!("{:03}_{year}-{:02}-{:02}.{extension}",index, month, day);
+            let mut file_name = format!("{:03}_{year}-{:02}-{:02}.{extension}", index, month, day);
 
-            if !name_input.is_empty()
-            {
-                file_name = format!("{:03}_{year}-{:02}-{:02}-{name_input}.{extension}",index, month, day);
+            if !name_input.is_empty() {
+                file_name = format!(
+                    "{:03}_{year}-{:02}-{:02}-{name_input}.{extension}",
+                    index, month, day
+                );
             }
-
-            
 
             skip_fail!(
                 rename_image(&file.1, &target_path, file_name),
@@ -162,15 +172,13 @@ fn sort_dialog(config: &Settings) {
             //skip_fail!(fs::remove_file(&file.1), format!("Couldn't remove image {number} from sort folder"));
 
             let _ = match resort_folder_index(&target_path) {
-                Ok(v) => {},
-                Err(err) => println!("Err: {:?} ", err)
+                Ok(v) => {}
+                Err(err) => println!("Err: {:?} ", err),
             };
 
             if index == 1 {
                 output_index.push((target_path, 1));
             }
-
         }
-        
     }
 }

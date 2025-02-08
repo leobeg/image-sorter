@@ -11,3 +11,5 @@ clap = { version = "4.5.0", features = ["derive"] }
 dialoguer = { version = "0.11.0", features = ["history"] }
 kamadak-exif = "0.5.5"
 opener = "0.6.1"
+thiserror = "2.0.11"
+toml = "0.8"
