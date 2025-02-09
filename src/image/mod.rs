@@ -1,4 +1,4 @@
-use std::path::PathBuf;
+use std::{fs, path::PathBuf};
 
 use chrono::{DateTime, Utc};
 use image_date::ImageParseError;
@@ -18,25 +18,67 @@ pub enum ImageError {
     InvalidDate(ImageParseError),
 }
 
+#[derive(Clone, Debug)]
 pub struct Image {
     pub path: PathBuf,
+    pub extension: String,
     pub date: DateTime<Utc>,
+    pub file_name: Option<String>,
 }
 
 impl Image {
     pub fn from_path_buf(path: PathBuf) -> Result<Self, ImageError> {
         let extension = path.extension().ok_or(ImageError::ExtensionMissing)?;
+        let extension = extension
+            .to_os_string()
+            .into_string()
+            .map_err(|_| ImageError::ExtensionMissing)?;
 
         // If path not a file or not jpg or png skip
         if !path.is_file() || !(extension == "jpg" || extension == "png") {
             return Err(ImageError::NotAnImage);
         }
 
-        let image_date = Self::get_image_date(&path).map_err(|err| ImageError::InvalidDate(err))?;
+        let image_date = Self::get_image_date(&path).map_err(ImageError::InvalidDate)?;
 
         Ok(Self {
             path,
+            extension,
             date: image_date,
+            file_name: None,
         })
+    }
+
+    pub fn copy_image(
+        &self,
+        destination: &PathBuf,
+        file_name: String,
+    ) -> Result<Image, ImageError> {
+        fs::create_dir_all(destination).map_err(|_| ImageError::OSFileSystem)?;
+        let mut image = self.clone();
+
+        image.path = destination.join(&file_name);
+        image.file_name = Some(file_name);
+
+        fs::copy(&self.path, &image.path).map_err(|_| ImageError::OSFileSystem)?;
+
+        Ok(image)
+    }
+
+    pub fn move_image(
+        mut self,
+        destination: &PathBuf,
+        file_name: String,
+    ) -> Result<Image, ImageError> {
+        fs::create_dir_all(destination).map_err(|_| ImageError::OSFileSystem)?;
+
+        let target_path = destination.join(&file_name);
+
+        fs::rename(&self.path, &target_path).map_err(|_| ImageError::OSFileSystem)?;
+
+        self.path = target_path;
+        self.file_name = Some(file_name);
+
+        Ok(self)
     }
 }

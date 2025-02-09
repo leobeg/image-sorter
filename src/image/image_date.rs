@@ -1,4 +1,8 @@
-use std::{fs::File, io::BufReader, path::PathBuf};
+use std::{
+    fs::File,
+    io::BufReader,
+    path::{Path, PathBuf},
+};
 
 use chrono::{DateTime, NaiveDate, TimeZone, Utc};
 use exif::{Exif, In, Reader, Tag};
@@ -38,10 +42,10 @@ impl Image {
             _ => return Err(Box::new(ImageParseError::Exif)),
         };
 
-        return Ok(date);
+        Ok(date)
     }
 
-    fn get_file_name(path: &PathBuf) -> Result<String, ImageParseError> {
+    fn get_file_name(path: &Path) -> Result<String, ImageParseError> {
         let stem = match path.file_stem() {
             Some(v) => v,
             None => return Err(ImageParseError::FileOpen),
@@ -52,11 +56,11 @@ impl Image {
             None => return Err(ImageParseError::FileOpen),
         };
 
-        return Ok(String::from(name));
+        Ok(String::from(name))
     }
 
     fn get_date_exif(path: &PathBuf) -> Result<DateTime<Utc>, ImageParseError> {
-        let file = File::open(&path).map_err(|_| ImageParseError::FileOpen)?;
+        let file = File::open(path).map_err(|_| ImageParseError::FileOpen)?;
         let exif: Exif = Reader::new()
             .read_from_container(&mut BufReader::new(&file))
             .map_err(|_| ImageParseError::Exif)?;

@@ -1,83 +1,50 @@
-use std::{error::Error, fs, path::PathBuf};
+use std::{fs, path::Path};
 
-// use config::{Config, ConfigError};
-use dialoguer::{console::Style, theme::ColorfulTheme, Confirm, Input};
+use serde::{Deserialize, Serialize};
 
-#[derive(Debug, Clone)]
-pub struct Settings {
-    //pub rename: bool,
-    pub image_folder: PathBuf,
-    pub input_folder: PathBuf,
-    //pub use_sort_folder: bool,
+const CONFIG_NAME: &str = "./configuration.toml";
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct Config {
+    pub input_folder: String,
+    pub output_folder: String,
+    pub reorder_after_sort: bool,
 }
 
-// const CONFIG_FILE_PATH: &str = "./config/Default.toml";
-// const CONFIG_FILE_PREFIX: &str = "./config/";
+impl Config {
+    pub fn load() -> Option<Self> {
+        //let config_dir = config_dir().expect("Couldn't get users config dir");
+        let path = Path::new(CONFIG_NAME);
 
-// fn save_config_to_fs(path: &PathBuf) -> Result<Option<Settings>, ConfigError>
-// {
-//     let settings = Config::builder()
-//     // Add in `./Settings.toml`
-//     .add_source(config::File::with_name("./Settings"))
-//     // Add in settings from the environment (with a prefix of APP)
-//     // Eg.. `APP_DEBUG=1 ./target/app` would set the `debug` key
-//     .add_source(config::Environment::with_prefix("APP"))
-//     .build()
-//     .unwrap();
+        if !path.exists() {
+            return None;
+        }
 
-//     Ok(Some((
-//         Settings {
+        let file_content = fs::read_to_string(&path)
+            .unwrap_or_else(|_| panic!("Couldn't read configuration file at {:?}", &path));
 
-//         }
-//     )))
-// }
+        let config: Self = toml::from_str(&file_content).unwrap_or_else(|err| {
+                panic!(
+                    "Couldn't parse config at {:?}. Reason: {}",
+                    &path,
+                    err.message()
+                )
+            });
 
-pub fn dialog_config() -> Result<Option<Settings>, Box<dyn Error>> {
-    let theme = ColorfulTheme {
-        values_style: Style::new().yellow().dim(),
-        ..ColorfulTheme::default()
-    };
-    println!("Welcome to the setup wizard");
-
-    if !Confirm::with_theme(&theme)
-        .with_prompt("Do you want to continue?")
-        .interact()?
-    {
-        return Ok(None);
+        Some(config)
     }
 
-    let image_folder: String = Input::with_theme(&theme)
-        .with_prompt("Path to image folder")
-        .interact()?;
+    pub fn save(&self) {
+        let path = Path::new(CONFIG_NAME);
 
-    let input_folder: String = Input::with_theme(&theme)
-        .with_prompt("Path to input folder")
-        .interact()?;
-
-    let image_folder: PathBuf = image_folder.into();
-
-    if !image_folder.exists() {
-        println!("The image folder does not exist. Creating?");
-
-        match fs::create_dir(&image_folder) {
-            Ok(()) => println!("Success"),
-            Err(err) => {
-                println!("Could not create folder: {:?}", err);
-                return Ok(None);
-            }
+        if let Err(err) = fs::write(&path, toml::to_string(&self).unwrap()) {
+            panic!(
+                "Couldn't write config to {:?}. Reason: {}",
+                &path, err
+            );
         }
     }
-
-    let input_folder: PathBuf = input_folder.into();
-
-    if !input_folder.exists() {
-        println!("Input folder does not exist. Exiting...");
-        return Ok(None);
-    }
-
-    Ok(Some(Settings {
-        //rename,
-        image_folder,
-        input_folder, //use_sort_folder,
-    }))
 }
+
+
+

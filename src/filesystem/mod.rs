@@ -1,17 +1,22 @@
-use std::{path::PathBuf, vec};
+use std::{fs, path::PathBuf, vec};
 
+use opener::OpenError;
 use thiserror::Error;
 
 use crate::image::Image;
 
 mod filetree;
+mod sorting;
 
 #[derive(Error, Debug)]
 pub enum FileSystemError {
     #[error("failed to access the os filesystem")]
     OSFileSystem,
+    #[error("failed to open folder")]
+    OpenerErr(OpenError),
 }
 
+#[derive(Clone)]
 pub struct FileSystem {
     pub input_folder_path: PathBuf,
     pub output_folder_path: PathBuf,
@@ -19,14 +24,27 @@ pub struct FileSystem {
 }
 
 impl FileSystem {
-
-    
-    pub fn new(input_folder_path: PathBuf, output_folder_path: PathBuf, sort_folder_path: PathBuf) -> Self {
-        Self { input_folder_path, output_folder_path, sort_folder_path }
+    pub fn new(
+        input_folder_path: PathBuf,
+        output_folder_path: PathBuf,
+        sort_folder_path: PathBuf,
+    ) -> Self {
+        Self {
+            input_folder_path,
+            output_folder_path,
+            sort_folder_path,
+        }
     }
-    
-    pub fn read_input_dir(&self) -> Result<Vec<Image>, FileSystemError> {
+
+    pub fn open_sort(&self) -> Result<(), FileSystemError> {
+        fs::create_dir_all(&self.sort_folder_path).map_err(|_| FileSystemError::OSFileSystem)?;
+        opener::open(&self.sort_folder_path).map_err(FileSystemError::OpenerErr)?;
+        Ok(())
+    }
+
+    fn read_images_from_input_dir(&self) -> Result<Vec<Image>, FileSystemError> {
         let paths = Self::get_dir_content(self.input_folder_path.clone())?;
+
         let mut images: Vec<Image> = vec![];
         let mut skip_counter: u32 = 0;
 
@@ -51,9 +69,5 @@ impl FileSystem {
         }
 
         Ok(images)
-    }
-
-    pub fn get_last_index_of_folder(_folder: String) -> u32 {
-        0
     }
 }
