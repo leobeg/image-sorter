@@ -9,7 +9,7 @@ mod sorter;
 
 //mod file_index;
 
-use cli::{actions::config_wizard_action::ConfigWizardAction, console_input::{ConsoleInput, UserAction}};
+use cli::{actions::config_wizard::ConfigWizard, console_input::{ConsoleInput, UserAction}};
 use config::Config;
 
 
@@ -25,7 +25,7 @@ impl ImageSorter {
         let config = if config.is_some() {
             config.unwrap()
         } else {
-            ConfigWizardAction::prompt().expect("No valid config")
+            ConfigWizard::prompt().expect("No valid config")
         };
 
         Self {

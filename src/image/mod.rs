@@ -4,6 +4,8 @@ use chrono::{DateTime, Utc};
 use image_date::ImageParseError;
 use thiserror::Error;
 
+use crate::cli::console_input::ConsoleInput;
+
 mod image_date;
 
 #[derive(Error, Debug)]
@@ -16,6 +18,8 @@ pub enum ImageError {
     NotAnImage,
     #[error("could not get date")]
     InvalidDate(ImageParseError),
+    #[error("there is already a image with the same name")]
+    DuplicateName,
 }
 
 #[derive(Clone, Debug)]
@@ -73,6 +77,12 @@ impl Image {
         fs::create_dir_all(destination).map_err(|_| ImageError::OSFileSystem)?;
 
         let target_path = destination.join(&file_name);
+
+        if target_path.exists() {
+            if !ConsoleInput::confirm_action("Do you want to overwrite the existing image?").unwrap() {
+                return Err(ImageError::DuplicateName);
+            }
+        }
 
         fs::rename(&self.path, &target_path).map_err(|_| ImageError::OSFileSystem)?;
 

@@ -1,5 +1,6 @@
 use std::path::Path;
 
+use dialoguer::Confirm;
 use thiserror::Error;
 
 use crate::{config::Config, filesystem::FileSystem, sorter::Sorter};
@@ -87,5 +88,13 @@ impl ConsoleInput {
         }
 
         Ok(image_numbers)
+    }
+
+    pub fn confirm_action(message: &str) -> Result<bool, ConsoleError> {
+        let confirm = Confirm::new()
+        .with_prompt(message)
+        .interact().map_err(|_| ConsoleError::InvalidInput)?;
+
+        Ok(confirm)
     }
 }

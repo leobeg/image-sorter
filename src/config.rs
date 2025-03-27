@@ -37,7 +37,7 @@ impl Config {
     pub fn save(&self) {
         let path = Path::new(CONFIG_NAME);
 
-        if let Err(err) = fs::write(&path, toml::to_string(&self).unwrap()) {
+        if let Err(err) = fs::write(&path, toml::to_string_pretty(&self).unwrap()) {
             panic!(
                 "Couldn't write config to {:?}. Reason: {}",
                 &path, err

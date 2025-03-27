@@ -5,9 +5,9 @@ use dialoguer::{console::Style, theme::ColorfulTheme, Input};
 use crate::{cli::console_input::ConsoleError, config::Config};
 
 
-pub struct ConfigWizardAction;
+pub struct ConfigWizard;
 
-impl ConfigWizardAction {
+impl ConfigWizard {
     pub fn prompt() -> Result<Config, ConsoleError> {
         let theme = ColorfulTheme {
             values_style: Style::new().yellow().dim(),
